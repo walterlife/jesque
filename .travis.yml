@@ -3,7 +3,6 @@ env:
     - secure: "a/uyfxeCoDUhXfCDhhibIXOYpWXhio3SgiN/upfJDN+KFf8xNvs/b1TUotbWKCVjssMHNS5RvRVr2UUOC4Rg/Qxfrea7pYRyU6aBbtCLzP7hKoE4rJWPSgLOmkpmO7Q47KDrUesy3G5cyMhpp65PzSUyOkpOXQi8lrb4/JA5Wi4="
 language: java
 jdk:
-  - openjdk7
   - oraclejdk7
 services:
   - redis-server
@@ -17,4 +16,4 @@ addons:
     notification_email: gresrun@gmail.com
     build_command_prepend: "mvn clean"
     build_command:   "mvn -DskipTests=true compile"
-    branch_pattern: master
+    branch_pattern: coverity_scan
