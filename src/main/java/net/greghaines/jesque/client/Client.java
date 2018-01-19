@@ -59,6 +59,8 @@ public interface Client {
      */
     void end();
 
+    void resetDb() throws Exception;
+
     /**
      * Acquire a non-blocking distributed lock. Calling this method again renews
      * the lock.

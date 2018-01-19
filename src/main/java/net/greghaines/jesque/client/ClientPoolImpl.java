@@ -122,6 +122,24 @@ public class ClientPoolImpl extends AbstractClient {
         // Do nothing
     }
 
+    @Override
+    public void resetDb() throws Exception {
+        PoolUtils.doWorkInPool(this.jedisPool, new PoolWork<Jedis, Void>() {
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public Void doWork(final Jedis jedis) {
+                try {
+                    jedis.flushDB();
+                } finally {
+                    jedis.quit();
+                }
+            return null;
+            }
+        });
+    }
+
     /**
      * {@inheritDoc}
      */

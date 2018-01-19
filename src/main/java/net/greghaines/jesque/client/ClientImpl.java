@@ -148,6 +148,16 @@ public class ClientImpl extends AbstractClient {
         this.jedis.quit();
     }
 
+    @Override
+    public void resetDb() {
+        ensureJedisConnection();
+        try {
+            jedis.flushDB();
+        } finally {
+            jedis.quit();
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
