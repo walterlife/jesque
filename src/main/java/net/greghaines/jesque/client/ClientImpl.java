@@ -15,6 +15,7 @@
  */
 package net.greghaines.jesque.client;
 
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -118,6 +119,12 @@ public class ClientImpl extends AbstractClient {
         doPriorityEnqueue(this.jedis, getNamespace(), queue, jobJson);
     }
 
+    @Override
+    protected void doBulkEnqueue(final String queue, final List<String> jobJson, final int batchSize) {
+        ensureJedisConnection();
+        doBulkEnqueue(this.jedis,getNamespace(),queue,jobJson,batchSize);
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -126,6 +133,8 @@ public class ClientImpl extends AbstractClient {
         ensureJedisConnection();
         return doAcquireLock(this.jedis, getNamespace(), lockName, lockHolder, timeout);
     }
+
+
 
     /**
      * {@inheritDoc}

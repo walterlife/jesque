@@ -16,6 +16,9 @@
 package net.greghaines.jesque.client;
 
 import net.greghaines.jesque.Job;
+import redis.clients.jedis.Jedis;
+
+import java.util.List;
 
 /**
  * A Client allows Jobs to be enqueued for execution by Workers.
@@ -48,6 +51,8 @@ public interface Client {
      *             if the queue is null or empty or if the job is null
      */
     void priorityEnqueue(String queue, Job job);
+
+    void bulkEnqueue(String queue, List<Job> jobList, int batchSize);
 
     /**
      * Quits the connection to the Redis server.

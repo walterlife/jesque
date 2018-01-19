@@ -18,13 +18,19 @@ package net.greghaines.jesque.client;
 import static net.greghaines.jesque.utils.ResqueConstants.QUEUE;
 import static net.greghaines.jesque.utils.ResqueConstants.QUEUES;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import net.greghaines.jesque.Config;
 import net.greghaines.jesque.Job;
 import net.greghaines.jesque.json.ObjectMapperFactory;
 import net.greghaines.jesque.utils.JedisUtils;
 import net.greghaines.jesque.utils.JesqueUtils;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.Pipeline;
 import redis.clients.jedis.Transaction;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Common logic for Client implementations.
@@ -97,6 +103,26 @@ public abstract class AbstractClient implements Client {
         }
     }
 
+    @Override
+    public void bulkEnqueue(final String queue, final List<Job> jobList,int batchSize) {
+        validateArguments(queue,jobList);
+        try {
+            doBulkEnqueue(queue, serialize(jobList),batchSize);
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private List<String> serialize(List<Job> jobList) throws JsonProcessingException {
+        List<String> jobsSerialized = new ArrayList<>();
+        for (Job job: jobList) {
+            jobsSerialized.add(ObjectMapperFactory.get().writeValueAsString(job));
+        }
+        return jobsSerialized;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -143,6 +169,8 @@ public abstract class AbstractClient implements Client {
      *             in case something goes wrong
      */
     protected abstract void doPriorityEnqueue(String queue, String msg) throws Exception;
+
+    protected abstract void doBulkEnqueue(String queue, List<String> jobsSerialized,int batchSize) throws Exception;
 
     /**
      * Actually acquire the lock based upon the client acquisition model.
@@ -194,6 +222,27 @@ public abstract class AbstractClient implements Client {
     public static void doPriorityEnqueue(final Jedis jedis, final String namespace, final String queue, final String jobJson) {
         jedis.sadd(JesqueUtils.createKey(namespace, QUEUES), queue);
         jedis.lpush(JesqueUtils.createKey(namespace, QUEUE, queue), jobJson);
+    }
+
+
+    public static void doBulkEnqueue(Jedis jedis, String namespace, String queue, List<String> jobJsonList, int batchSize) {
+        jedis.sadd(JesqueUtils.createKey(namespace, "queues"), queue);
+        Pipeline pipeline = jedis.pipelined();
+        String key = JesqueUtils.createKey(namespace, "queue", queue);
+        int i = 0;
+
+        for (String jobJson : jobJsonList) {
+            jedis.rpush(key, jobJson);
+            ++i;
+            if (i == batchSize) {
+                pipeline.sync();
+                pipeline = jedis.pipelined();
+                i = 0;
+            }
+        }
+        if (i > 0) {
+            pipeline.sync();
+        }
     }
 
     /**
@@ -395,6 +444,20 @@ public abstract class AbstractClient implements Client {
         }
         if (!job.isValid()) {
             throw new IllegalStateException("job is not valid: " + job);
+        }
+    }
+
+    private static void validateArguments(final String queue, final List<Job> jobList) {
+        if (queue == null || "".equals(queue)) {
+            throw new IllegalArgumentException("queue must not be null or empty: " + queue);
+        }
+        for (Job job: jobList) {
+            if (job == null) {
+                throw new IllegalArgumentException("job must not be null");
+            }
+            if (!job.isValid()) {
+                throw new IllegalStateException("job is not valid: " + job);
+            }
         }
     }
 
